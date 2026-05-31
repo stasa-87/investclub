@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "5444:5432"
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_DB: investclub
+      POSTGRES_USER: investclub
+      POSTGRES_PASSWORD: investclub
+    volumes:
+      - investclub-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U investclub -d investclub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - ./env/backend.env
+    volumes:
+      - investclub-backend-uploads:/app/uploads
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    env_file:
+      - ./env/frontend.env
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+
+volumes:
+  investclub-db-data:
+  investclub-backend-uploads:
