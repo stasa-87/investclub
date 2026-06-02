@@ -6,7 +6,7 @@ import react from '@vitejs/plugin-react'
 // Uses VITE_API_BASE_URL if available, otherwise falls back to localhost:8081
 export default ({ mode }: { mode: string }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const backend = (env.VITE_API_BASE_URL || 'http://localhost:8081').replace(/\/+$/, '')
+  const backend = (env.VITE_DEV_PROXY_TARGET || env.VITE_API_BASE_URL || 'http://localhost:8081').replace(/\/+$/, '')
 
   return defineConfig({
     plugins: [react()],

@@ -60,6 +60,68 @@ public class TradeRepository {
         );
     }
 
+    // Filtering and pagination for trades
+    public List<TradePlaceholderRecord> findFilteredByUserId(
+            Long userId,
+            String ticker,
+            String status,
+            String strategy,
+            OffsetDateTime timeframeStart,
+            OffsetDateTime timeframeEnd,
+            int offset,
+            int limit
+    ) {
+        StringBuilder sql = new StringBuilder("SELECT * FROM trade_placeholders WHERE user_id = ?");
+        newLineIf(sql, ticker != null, " AND ticker = ?");
+        newLineIf(sql, status != null, " AND status = ?");
+        newLineIf(sql, strategy != null, " AND strategy = ?");
+        newLineIf(sql, timeframeStart != null, " AND opened_at >= ?");
+        newLineIf(sql, timeframeEnd != null, " AND opened_at <= ?");
+        sql.append(" ORDER BY opened_at DESC, id DESC LIMIT ? OFFSET ?");
+
+        List<Object> params = new java.util.ArrayList<>();
+        params.add(userId);
+        if (ticker != null) params.add(ticker);
+        if (status != null) params.add(status);
+        if (strategy != null) params.add(strategy);
+        if (timeframeStart != null) params.add(java.sql.Timestamp.from(timeframeStart.toInstant()));
+        if (timeframeEnd != null) params.add(java.sql.Timestamp.from(timeframeEnd.toInstant()));
+        params.add(limit);
+        params.add(offset);
+
+        return jdbcTemplate.query(sql.toString(), tradeRowMapper, params.toArray());
+    }
+
+    public long countFilteredByUserId(
+            Long userId,
+            String ticker,
+            String status,
+            String strategy,
+            OffsetDateTime timeframeStart,
+            OffsetDateTime timeframeEnd
+    ) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM trade_placeholders WHERE user_id = ?");
+        newLineIf(sql, ticker != null, " AND ticker = ?");
+        newLineIf(sql, status != null, " AND status = ?");
+        newLineIf(sql, strategy != null, " AND strategy = ?");
+        newLineIf(sql, timeframeStart != null, " AND opened_at >= ?");
+        newLineIf(sql, timeframeEnd != null, " AND opened_at <= ?");
+
+        List<Object> params = new java.util.ArrayList<>();
+        params.add(userId);
+        if (ticker != null) params.add(ticker);
+        if (status != null) params.add(status);
+        if (strategy != null) params.add(strategy);
+        if (timeframeStart != null) params.add(java.sql.Timestamp.from(timeframeStart.toInstant()));
+        if (timeframeEnd != null) params.add(java.sql.Timestamp.from(timeframeEnd.toInstant()));
+
+        return jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
+    }
+
+    private void newLineIf(StringBuilder sb, boolean cond, String sql) {
+        if (cond) sb.append(sql);
+    }
+
     public List<TradePlaceholderRecord> findAllByUserId(Long userId) {
         return jdbcTemplate.query(
             "SELECT * FROM trade_placeholders WHERE user_id = ? ORDER BY opened_at DESC, id DESC",

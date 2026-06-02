@@ -9,6 +9,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import com.investclub.backend.web.UserRepository;
+import com.investclub.backend.web.TradeRepository;
+import com.investclub.backend.web.TradePlaceholderRequest;
+import com.investclub.backend.web.TradeExitRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @SpringBootApplication
@@ -35,7 +38,7 @@ public class InvestclubBackendApplication {
     }
 
     @Bean
-    ApplicationRunner seedDemoUser(Environment environment, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    ApplicationRunner seedDemoUser(Environment environment, UserRepository userRepository, PasswordEncoder passwordEncoder, TradeRepository tradeRepository) {
         return new ApplicationRunner() {
             @Override
             public void run(ApplicationArguments args) {
@@ -51,6 +54,55 @@ public class InvestclubBackendApplication {
                     } else {
                         System.out.println("Demo user already exists or email/username taken: " + demoEmail);
                     }
+
+                    // --- BEGIN DEMO TRADE SEED ---
+                    var demoUser = userRepository.findByUsernameOrEmail(demoEmail);
+                    if (demoUser != null) {
+                        var existingTrades = tradeRepository.findAllByUserId(demoUser.id());
+                        if (existingTrades == null || existingTrades.isEmpty()) {
+                            // Trade 1: No exits
+                            TradePlaceholderRequest t1 = new TradePlaceholderRequest();
+                            t1.openedAt = java.time.OffsetDateTime.now().minusDays(10);
+                            t1.ticker = "AAPL";
+                            t1.side = "BUY";
+                            t1.timeframe = "1d";
+                            t1.strategy = "demo-strategy";
+                            t1.currency = "USD";
+                            t1.quantity = new java.math.BigDecimal("10");
+                            t1.entryPrice = new java.math.BigDecimal("150.00");
+                            t1.stopLoss = new java.math.BigDecimal("140.00");
+                            t1.takeProfit = new java.math.BigDecimal("170.00");
+                            t1.notes = "Demo trade 1";
+                            t1.beThresholdPercent = new java.math.BigDecimal("1.0");
+                            var trade1 = tradeRepository.createTrade(demoUser.id(), t1);
+
+                            // Trade 2: With exit
+                            TradePlaceholderRequest t2 = new TradePlaceholderRequest();
+                            t2.openedAt = java.time.OffsetDateTime.now().minusDays(5);
+                            t2.ticker = "TSLA";
+                            t2.side = "SELL";
+                            t2.timeframe = "4h";
+                            t2.strategy = "demo-strategy";
+                            t2.currency = "USD";
+                            t2.quantity = new java.math.BigDecimal("5");
+                            t2.entryPrice = new java.math.BigDecimal("700.00");
+                            t2.stopLoss = new java.math.BigDecimal("750.00");
+                            t2.takeProfit = new java.math.BigDecimal("650.00");
+                            t2.notes = "Demo trade 2";
+                            t2.beThresholdPercent = new java.math.BigDecimal("1.0");
+                            var trade2 = tradeRepository.createTrade(demoUser.id(), t2);
+
+                            TradeExitRequest exit = new TradeExitRequest();
+                            exit.closedAt = java.time.OffsetDateTime.now().minusDays(2);
+                            exit.quantity = new java.math.BigDecimal("5");
+                            exit.exitPrice = new java.math.BigDecimal("680.00");
+                            exit.notes = "Demo exit";
+                            tradeRepository.addExit(trade2.id(), exit);
+
+                            System.out.println("Seeded demo trades for demo user: " + demoEmail);
+                        }
+                    }
+                    // --- END DEMO TRADE SEED ---
                 } catch (Exception ex) {
                     System.err.println("Failed to create demo user: " + ex.getMessage());
                 }

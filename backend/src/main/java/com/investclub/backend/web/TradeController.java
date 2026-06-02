@@ -46,8 +46,30 @@ public class TradeController {
 
     @GetMapping
     @Operation(summary = "List current user's trade placeholders")
-    public ResponseEntity<List<TradePlaceholderDto>> listTrades(Authentication authentication) {
-        return ResponseEntity.ok(tradeService.listTrades(authentication.getName()));
+    public ResponseEntity<PaginatedTradesDto> listTrades(
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String ticker,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String status,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String strategy,
+            @org.springframework.web.bind.annotation.RequestParam(name = "timeframe_start", required = false) java.time.OffsetDateTime timeframeStart,
+            @org.springframework.web.bind.annotation.RequestParam(name = "timeframe_end", required = false) java.time.OffsetDateTime timeframeEnd,
+            @org.springframework.web.bind.annotation.RequestParam(required = false, defaultValue = "1") Integer page,
+            @org.springframework.web.bind.annotation.RequestParam(name = "per_page", required = false, defaultValue = "20") Integer perPage
+    ) {
+        int safePage = page == null ? 1 : Math.max(page, 1);
+        int safePerPage = perPage == null ? 20 : Math.max(Math.min(perPage, 100), 1);
+        return ResponseEntity.ok(
+            tradeService.listTrades(
+                authentication.getName(),
+                ticker,
+                status,
+                strategy,
+                timeframeStart,
+                timeframeEnd,
+                safePage,
+                safePerPage
+            )
+        );
     }
 
     @GetMapping("/{tradeId}")

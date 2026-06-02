@@ -41,7 +41,7 @@ try {
 }
 
 const frontendUrl = process.env.FRONTEND_PUBLIC_URL || 'http://localhost:5173'
-const backendUrl = process.env.VITE_API_BASE_URL || process.env.BACKEND_PUBLIC_URL || 'http://localhost:8081'
+const backendUrl = process.env.VITE_DEV_PROXY_TARGET || process.env.VITE_API_BASE_URL || process.env.BACKEND_PUBLIC_URL || 'http://localhost:8081'
 const viteBin = resolve('node_modules', 'vite', 'bin', 'vite.js')
 const viteArgs = [viteBin, ...process.argv.slice(2)]
 

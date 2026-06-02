@@ -63,7 +63,7 @@ async function throwApiError(response: Response): Promise<never> {
   }
 }
 
-async function request(path: string, options: RequestOptions = {}): Promise<Response> {
+export async function request(path: string, options: RequestOptions = {}): Promise<Response> {
   const { auth = false, retryOnUnauthorized = auth, headers, ...rest } = options
   const requestHeaders = new Headers(headers)
 

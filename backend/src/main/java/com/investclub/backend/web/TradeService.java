@@ -27,11 +27,28 @@ public class TradeService {
         return toDto(record, List.of());
     }
 
-    public List<TradePlaceholderDto> listTrades(String username) {
+    public PaginatedTradesDto listTrades(
+            String username,
+            String ticker,
+            String status,
+            String strategy,
+            OffsetDateTime timeframeStart,
+            OffsetDateTime timeframeEnd,
+            int page,
+            int perPage
+    ) {
         Long userId = requireUserId(username);
-        return tradeRepository.findAllByUserId(userId).stream()
-            .map(record -> toDto(record, tradeRepository.findExitsByTradeId(record.id())))
-            .toList();
+        int safePage = Math.max(page, 1);
+        int safePerPage = Math.max(Math.min(perPage, 100), 1);
+        int offset = (safePage - 1) * safePerPage;
+        List<TradeRepository.TradePlaceholderRecord> records = tradeRepository.findFilteredByUserId(
+                userId, ticker, status, strategy, timeframeStart, timeframeEnd, offset, safePerPage);
+        long total = tradeRepository.countFilteredByUserId(
+                userId, ticker, status, strategy, timeframeStart, timeframeEnd);
+        List<TradePlaceholderDto> data = records.stream()
+                .map(record -> toDto(record, tradeRepository.findExitsByTradeId(record.id())))
+                .toList();
+        return new PaginatedTradesDto(data, total, safePage, safePerPage);
     }
 
     public TradePlaceholderDto getTrade(String username, Long tradeId) {
