@@ -43,8 +43,17 @@ type RequestOptions = RequestInit & {
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || ''
 
+const isDev = import.meta.env.DEV === true
+
 function buildApiUrl(path: string) {
   return `${apiBaseUrl}${path}`
+}
+
+function debugLog(...args: unknown[]) {
+  if (isDev) {
+    // eslint-disable-next-line no-console
+    console.debug('[investclub:api]', ...args)
+  }
 }
 
 async function throwApiError(response: Response): Promise<never> {
@@ -68,10 +77,27 @@ async function request(path: string, options: RequestOptions = {}): Promise<Resp
     requestHeaders.set('Authorization', `Bearer ${session.accessToken}`)
   }
 
-  let response = await fetch(buildApiUrl(path), {
-    ...rest,
-    headers: requestHeaders,
-  })
+  const url = buildApiUrl(path)
+
+  // Log the outgoing request in dev so the developer can see where requests go
+  try {
+    const headerObj: Record<string, string> = {}
+    for (const [k, v] of requestHeaders.entries()) headerObj[k] = v
+    debugLog('request:start', { method: (rest as any).method || 'GET', url, auth, headers: headerObj, bodyPreview: typeof (rest as any).body === 'string' ? ((rest as any).body as string).slice(0, 200) : undefined })
+  } catch (e) {
+    // ignore logging errors
+  }
+
+  let response: Response
+  try {
+    response = await fetch(url, {
+      ...rest,
+      headers: requestHeaders,
+    })
+  } catch (err) {
+    debugLog('request:error', { url, err })
+    throw err
+  }
 
   if (auth && retryOnUnauthorized && response.status === 401) {
     const refreshed = await refreshAuthSession()
@@ -83,6 +109,7 @@ async function request(path: string, options: RequestOptions = {}): Promise<Resp
     })
   }
 
+  debugLog('request:finish', { url, status: response.status, ok: response.ok })
   return response
 }
 

@@ -66,8 +66,8 @@ function LoginPage() {
   const navigate = useNavigate()
   const { isLoading, isLoggedIn, login } = useAuth()
   const [form, setForm] = useState<LoginFormState>({
-    email: demoCredentials.email,
-    password: demoCredentials.password,
+    email: '',
+    password: '',
   })
   const [errors, setErrors] = useState<LoginFormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -82,6 +82,7 @@ function LoginPage() {
     health: null,
     demo: null,
   })
+  const isDev = import.meta.env.DEV === true
 
   const loadBackendStatus = async (signal?: AbortSignal) => {
     setApiState((current) => ({ ...current, loading: true, error: null }))
@@ -153,12 +154,23 @@ function LoginPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
+    if (isDev) {
+      // avoid logging raw password, only show masked length
+      // eslint-disable-next-line no-console
+      console.debug('[investclub:ui] handleSubmit', { email: form.email, passwordLength: form.password.length })
+    }
+
     if (!validateForm()) {
       setFeedback({
         tone: 'red',
         title: 'Check your details',
         message: 'Fix the highlighted fields and try again.',
       })
+
+      if (isDev) {
+        // eslint-disable-next-line no-console
+        console.debug('[investclub:ui] validateForm failed', { errors })
+      }
       return
     }
 
@@ -281,7 +293,7 @@ function LoginPage() {
         </Callout>
       ) : null}
 
-      <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+        <form className="space-y-4" onSubmit={handleSubmit} noValidate>
         <div className="space-y-2">
           <label className="block text-sm font-medium text-slate-700" htmlFor="login-email">
             Email
@@ -317,18 +329,47 @@ function LoginPage() {
           />
         </div>
 
-        <Button className="w-full justify-center" type="submit" loading={isSubmitting}>
-          Log in
-        </Button>
-      </form>
+         <div className="flex gap-3">
+           <Button className="flex-1 justify-center" type="submit" loading={isSubmitting}>
+             Log in
+           </Button>
 
-      <div className="rounded-2xl bg-slate-950 p-5 text-slate-100">
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-300">
-          Demo credentials
-        </p>
-        <p className="mt-3 text-sm text-slate-300">Email: {demoCredentials.email}</p>
-        <p className="mt-1 text-sm text-slate-300">Password: {demoCredentials.password}</p>
-      </div>
+           {isDev ? (
+             <Button
+               className="flex-1 justify-center"
+               type="button"
+               onClick={async () => {
+                 setErrors({})
+                 setIsSubmitting(true)
+                 setFeedback(null)
+
+                 try {
+                   // Fill the form visually
+                   setForm({ email: demoCredentials.email, password: demoCredentials.password })
+                   await login(demoCredentials.email, demoCredentials.password)
+                   setFeedback({
+                     tone: 'teal',
+                     title: 'Demo login',
+                     message: 'Demo login attempted. Redirecting...',
+                   })
+                   navigate('/dashboard')
+                 } catch (error) {
+                   const message =
+                     typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string'
+                       ? error.message
+                       : 'Demo login failed'
+
+                   setFeedback({ tone: 'red', title: 'Login failed', message })
+                 } finally {
+                   setIsSubmitting(false)
+                 }
+               }}
+             >
+               Use demo
+             </Button>
+           ) : null}
+         </div>
+      </form>
 
       <div className="text-sm text-slate-500">
         Don&apos;t have an account?{' '}

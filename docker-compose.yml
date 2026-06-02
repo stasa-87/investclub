@@ -21,9 +21,13 @@ services:
   backend:
     build:
       context: ./backend
+      target: dev
     env_file:
       - ./env/backend.env
     volumes:
+      - ./backend:/app:cached
+      - ~/.m2:/root/.m2:cached
+      - ./backend/target:/app/target
       - investclub-backend-uploads:/app/uploads
     ports:
       - "8081:8080"
@@ -46,10 +50,17 @@ services:
         condition: service_healthy
     env_file:
       - ./env/frontend.env
+    volumes:
+      - ./frontend:/app:cached
+      - frontend-node-modules:/app/node_modules
     ports:
       - "5173:5173"
     restart: unless-stopped
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=100
 
 volumes:
   investclub-db-data:
   investclub-backend-uploads:
+  frontend-node-modules:
